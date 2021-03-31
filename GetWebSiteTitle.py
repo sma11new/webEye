@@ -38,7 +38,7 @@ class GetWebSiteTitle:
         print(msg)
 
     def init(self):
-        print("\nthread:", self.args.Thread)
+        print("thread:", self.args.Thread)
         print("timeout:", self.args.timeout)
         print("testPort:", self.args.port)
 
@@ -56,11 +56,11 @@ class GetWebSiteTitle:
     def parseArgs(self):
         date = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
         parser = ArgumentParser()
-        parser.add_argument("-f", "--file", required=False, type=str, default=f"./ip.txt", help=f"The url file, default is ./ip.txt")
+        parser.add_argument("-f", "--file", required=False, type=str, default=f"./ip.txt", help=f"The IP file, default is ./ip.txt")
         parser.add_argument("-T", "--Thread", required=False, type=int, default=32, help=f"Number of thread, default is 32")
         parser.add_argument("-t", "--timeout", required=False, type=int, default=3,  help="request timeout(default 3)")
         parser.add_argument("-p", "--port", required=False, type=str, default="80,81,88,443,8080,8081", help=f"request port(default 80,81,88,443,8080,8081)")
-        parser.add_argument("-o", "--output", required=False, type=str, default=f"./output/title_{date}.txt",  help=f"Vuln url output file, default is ./output/title_{date}.txt")
+        parser.add_argument("-o", "--output", required=False, type=str, default=f"./output/title_{date}.txt",  help=f"WebSite Title output file, default is ./output/title_{date}.txt")
         return parser.parse_args()
 
     # 转换端口格式
