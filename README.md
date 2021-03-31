@@ -40,9 +40,9 @@ optional arguments:
 python GetWebSiteTitle.py
 ```
 
-![image-20210331113539640](.\README.assets\image-20210331113539640.png)
+![image-20210331113539640](README.assets\image-20210331113539640.png)
 
 大概一个IP用时1秒，具体根据timeout和要检测的端口数决定，结果均保存至output目录
 
-![image-20210331113746717](.\README.assets\image-20210331113746717.png)
+![image-20210331113746717](README.assets\image-20210331113746717.png)
 
