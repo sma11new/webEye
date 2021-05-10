@@ -100,13 +100,8 @@ class GetWebSiteTitle:
         targetList = []
         with open(self.args.file) as f:
             for line in f.readlines():
-                try:
-                    line = line.replace("http://", "")
-                except:
-                    try:
-                        line = line.replace("https://", "")
-                    except:
-                        pass
+                line = line.replace("http://", "") if "http://" in line else line
+                line = line.replace("https://", "") if "https://" in line else line
                 try:
                     # 允许IP文件中放入带端口的数据，如127.0.0.1:8080，截取IP
                     targetList.append(line.strip().split(":")[0])
