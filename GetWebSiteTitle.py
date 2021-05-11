@@ -100,13 +100,16 @@ class GetWebSiteTitle:
         targetList = []
         with open(self.args.file) as f:
             for line in f.readlines():
-                line = line.replace("http://", "") if "http://" in line else line
-                line = line.replace("https://", "") if "https://" in line else line
+                line = line.strip()
+                if "https://" in line:
+                    line = line.replace("https://", "")
+                if "http://"  in line:
+                    line = line.replace("http://", "")
                 try:
                     # 允许IP文件中放入带端口的数据，如127.0.0.1:8080，截取IP
-                    targetList.append(line.strip().split(":")[0])
+                    targetList.append(line.split(":")[0])
                 except:
-                    targetList.append(line.strip())
+                    targetList.append(line)
         return targetList
 
     # 多线程运行
@@ -119,13 +122,6 @@ class GetWebSiteTitle:
 
     # 输出到文件
     def output(self):
-        # if not os.path.isdir(r"./output"):
-        #     os.mkdir(r"./output")
-        # with open(self.args.output, "a", encoding="utf-8") as f:
-        #     for title in self.titleList:
-        #         f.write(title + "\n")
-		
-		
         self.outputFile = f"./output/{self.args.output}.csv"
         if not os.path.isdir(r"./output"):
             os.mkdir(r"./output")
