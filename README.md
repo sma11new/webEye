@@ -3,10 +3,10 @@
 
 **PS：全新版本的批量ip反查域名及备案信息工具已完成，更快更准确更高效：[ip2domain](https://github.com/Sma11New/ip2domain)**
 
+**此工具专项于ip对应web资产探测。**
 
-**此工具专项于ip对应web资产探测，icp查询作为可选辅助功能。**
 
-基于需求，对GetWebSiteTitle进行了二次修改，并更改项目名为**webEye**，用于快速批量检测IP上多个端口是否搭建网站，获取其Title以及**ICP备案信息**，快速确定IP所属单位，取代逐个IP、网站手工归属查询，红队资产探测，可配合 [PocList](https://github.com/Sma11New/PocList) 中的批量POC使用，刷SRC利器！
+基于需求，对GetWebSiteTitle进行了二次修改，并更改项目名为**webEye**，用于快速批量检测IP上多个端口是否搭建网站，获取其Title以及ICP备案信息，取代逐个IP、网站手工归属查询，红队资产探测，可配合 [PocList](https://github.com/Sma11New/PocList) 中的批量POC使用，刷SRC利器！
 
 webEye目前功能及要点：
 
