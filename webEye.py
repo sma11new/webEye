@@ -8,181 +8,127 @@ import re
 import csv
 import time
 import requests
-from urllib import parse
-from bs4 import BeautifulSoup
 from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, wait
-from argparse import ArgumentParser
+from module.ipParse import ipParse
+from module.portParse import portParse
+from module.banner import banner
+from module.argsParse import parseArgs
+from module.newPrint import newPrint
 
 from colorama import init
 init(autoreset=True)
 
-from wcwidth import wcswidth as ww
-def rpad(s, n, c=" "):
-    return s + (n - ww(s)) * c
-
 requests.packages.urllib3.disable_warnings()    # 抑制https错误信息
 
-class GetWebSiteTitle:
+class webEye:
+    statusCodeList = [200, 301, 302, 401, 403, 404]
     def __init__(self):
-        self.banner()
-        self.args = self.parseArgs()
-        self.transformPort()
-        self.init()
+        banner()
+        self.argsClass = parseArgs()
+        self.args = self.argsClass.parse_args()
+        self.initEnvironment()
         self.multiRun()
 
-    def banner(self):
-        logo = rf'''       
-                          )                  
-         (  (      (   ( /(  (   (       (   
-         )\))(    ))\  )\()) )\  )\ )   ))\  
-        ((_)()\  /((_)((_)\ ((_)(()/(  /((_) 
-        _(()((_)(_))  | |(_)| __|)(_))(_))      Author: Sma11New
-        \ V  V // -_) | '_ \| _|| || |/ -_)  
-         \_/\_/ \___| |_.__/|___|\_, |\___|  
-                                 |__/        '''
-        msg = f"""
-\033[36m+{"-" * 70}+\033[0m
-\033[36m|\033[0m  1  \033[36m|\033[0m    {rpad('Port of Web Scan    Web站点存活探测', 60)}\033[36m|\033[0m
-\033[36m|\033[0m  2  \033[36m|\033[0m    {rpad('Title of Web Scan   网站标题获取', 60)}\033[36m|\033[0m
-\033[36m|\033[0m  3  \033[36m|\033[0m    {rpad('ICP Find and Scan   站点ICP备案查询', 60)}\033[36m|\033[0m
-\033[36m+{"-" * 70}+\033[0m
-        """
-        print("\033[93m" + logo + "\033[0m")
-        print("\033[36m" + msg + "\033[0m")
-
-    def init(self):
-        print(f"\033[36m[*]  Thread:  {self.args.thread}")
-        print(f"\033[36m[*]  Timeout:  {self.args.Timeout}")
-        print(f"\033[36m[*]  TestPort:  {self.args.port}")
-        msg = ""
-        if os.path.isfile(self.args.file):
-            msg += "\033[36m[*]  Load IP file successfully"
-        else:
-            msg += f"\033[31m[!]  Load url file {self.args.file} failed\033[0m"
-        print(msg)
-        if "failed" in msg:
-            print("\033[31m[!]  Init failed, Please check the environment.")
-            exit(0)
-        print("\033[36m[*]  Init successfully\033[0m\n")
-        self.ipList = self.loadTarget()  # 所有目标
-        print(f"\033[36m[*]  IP Count: {len(self.ipList)}\033[0m\n")
-
-    def parseArgs(self):
-        date = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
-        # portList = "80,81,88,443,8000,8080,8081,8088,8090,8888,8181,9000"
-        portList = "80,81,88,443,8080,8081,8181,9000"
-        parser = ArgumentParser()
-        parser.add_argument("-f", "--file", required=False, type=str, default=f"./ip.txt", help=f"The IP file, default is ./ip.txt")
-        parser.add_argument("-t", "--thread", required=False, type=int, default=32, help=f"Number of thread, default is 32")
-        parser.add_argument("-T", "--Timeout", required=False, type=int, default=3,  help="request timeout(default 3)")
-        parser.add_argument("-p", "--port", required=False, type=str, default=portList, help=f"request port(default {portList})")
-        parser.add_argument("-o", "--output", required=False, type=str, default=f"title_{date}",  help="WebSite Title output file, default is ./output/{fileName}_title_{date}.csv")
-        parser.add_argument("--icp", required=False, action="store_true", default=False, help="Query ICP record information of the website, default False")
-        return parser.parse_args()
-
-    # 转换端口格式
-    def transformPort(self):
+    # 初始化环境
+    def initEnvironment(self):
+        newPrint("INFO", "Start Init Environment For webEye")
+        if not self.args.file and not self.args.ip:
+            self.argsClass.print_help()
+            exit()
+        if self.args.file:
+            if os.path.isfile(self.args.file):
+                newPrint("INFO", "Load ip file successfully")
+            else:
+                newPrint("ERROR", f"Load ip file {self.args.file} failed")
+                exit(0)
+        # newPrint("INFO", f"Init environment successfully")
         try:
-            self.args.port = list(map(int, str(self.args.port).split(",")))
+            self.ipList = self.loadTargetIP()  # 所有目标
         except:
-            print(f"\033[31mPort Error.\033[0m\n")
+            newPrint("ERROR", f"Parse ip \"{self.args.ip}\" failed")
             exit(0)
+        try:
+            self.portList = portParse(list(self.args.port.split(",")))
+            self.portList[0]
+        except:
+            newPrint("ERROR", f"Parse port \"{self.args.port}\" failed")
+            exit(0)
+        newPrint("INFO", f"【Thread: {self.args.thread}】 【Timeout: {self.args.Timeout}】")
+        # 输出文件相关
+        self.hasWriteTitle = False
+        if self.args.file:
+            fileName = list(os.path.splitext(os.path.basename(self.args.file)))[0]
+        else:
+            fileName = ""
+        self.outputFile = f"./output/{fileName}_{self.args.output}.csv"
+        if not os.path.isdir(r"./output"):
+            os.mkdir(r"./output")
+        # 生成任务列表相关
+        self.targetList = []
+        for ip in self.ipList:
+            for port in self.portList:
+                self.targetList.append([ip, port])
+        self.taskCount = len(self.targetList)
+        newPrint("INFO", f"【IP Count: {len(self.ipList)}】 【Task Count：{self.taskCount}】")
+        newPrint("INFO", f"【TestPort: {self.args.port}】")
+        newPrint("INFO", f"Init environment successfully")
 
     # 获取title
-    def getTitle(self, ip):
-        for port in self.args.port:
-            reqURL = f"http://{ip}:{port}"
-            try:
-                rep = requests.get(url=reqURL, verify=False, timeout=self.args.Timeout)
-                if rep.status_code == 400:  # https访问
-                    reqURL = f"https://{ip}:{port}"
-                rep = requests.get(url=reqURL, verify=False, timeout=self.args.Timeout)
-                rep.encoding = "utf-8"
-                if rep.status_code == 200:
+    def getTitle(self, ip_port):
+        hasPrint = False
+        reqURL = f"http://{ip_port[0]}:{ip_port[1]}"
+        try:
+            rep = requests.get(url=reqURL, verify=False, timeout=self.args.Timeout)
+            if rep.status_code == 400:  # https访问
+                reqURL = f"https://{ip_port[0]}:{ip_port[1]}"
+            rep = requests.get(url=reqURL, verify=False, timeout=self.args.Timeout)
+            rep.encoding = "utf-8"
+            if rep.status_code in self.statusCodeList:
+                try:
                     title = re.findall('<title>(.*)</title>', rep.text)[0].strip()
-                    if self.args.icp:
-                        icpData = self.findICP(rep.text)
-                        icpDataList = ["", "", "", "", ""]
-                        if icpData:
-                            icpDataDic = self.searchICP(icpData)
-                            # print(icpDataDic)
-                            if icpDataDic:
-                                icpDataList = list(icpDataDic.values())
-                        webDataList = [reqURL, title, icpData] + icpDataList
-                        # [reqURL, title, icpData, unitName, unitType, unitHost, webName, webIndex]
-                        msg = f"\033[92m[+]  {rpad(webDataList[0], 30)}{rpad(webDataList[1][:11], 24)}| {rpad(webDataList[2], 22)}| {rpad(webDataList[3], 30)}| {rpad(webDataList[4], 10)}| {rpad(webDataList[5], 5)}\033[0m"
-                    else:
-                        webDataList = [reqURL, title]
-                        msg = f"\033[32m[+]  {reqURL:<40}{title}\033[0m"
-                    self.lock.acquire()
-                    try:
-                        self.titleList.append(webDataList)
-                        print(msg)
-                    finally:
-                        self.lock.release()
-            except:
-                pass
-
-    # 查找页面ICP
-    def findICP(self, repText):
-        icpIndex = repText.find("ICP备")
-        if icpIndex > 0:
-            start = repText.rfind(">", 0, icpIndex) + 1
-            end = repText.find("<", icpIndex)
-            icpData = repText[start:end]
-            return icpData.strip()
-        else:
-            return ""
-
-    # ICP备案查询
-    def searchICP(self, msg):
-        icpEncode = parse.quote(msg.encode("utf8"))
-        try:
-            rep = requests.get(url=f"https://icp.chinaz.com/{icpEncode}", timeout=self.args.Timeout, verify=False)
+                except:
+                    title = ""
+                webDataList = [reqURL, rep.status_code, title]
+                self.lock.acquire()
+                try:
+                    self.titleList.append(webDataList)
+                    newPrint(str(rep.status_code), f"{reqURL:<32}{title}\033[0m", start="\r")
+                    hasPrint = True
+                    if len(self.titleList) % 20 == 0:
+                        self.outputToFile(self.titleList)
+                        self.titleList = []
+                finally:
+                    self.lock.release()
         except:
-            return False
-        soup = BeautifulSoup(rep.text, 'html.parser')
-        data = soup.find("ul", attrs={"class": "bor-t1s IcpMain01", "id": "first"})
-        # print(data.contents[11])
-        resultDic = {}
-        try:
-            resultDic["unitName"] = str(data.contents[1])[str(data.contents[1]).find('blank">') + 7:str(data.contents[1]).find('</a>')].strip()
-        except:
-            resultDic["unitName"] = ""
-        try:
-            resultDic["unitType"] = str(data.contents[3])[str(data.contents[3]).find('fwnone">') + 8:str(data.contents[3]).find('</strong>')].strip()
-        except:
-            resultDic["unitType"] = ""
-        try:
-            resultDic["unitHost"] = str(data.contents[5])[str(data.contents[5]).find('host=') + 5:str(data.contents[5]).find('" id=')].strip()
-        except:
-            resultDic["unitHost"] = ""
-        try:
-            resultDic["webName"] = str(data.contents[7])[str(data.contents[7]).find('<p>') + 3:str(data.contents[7]).find('</p>')].strip()
-        except:
-            resultDic["webName"] = ""
-        try:
-            resultDic["webIndex"] = str(data.contents[11])[str(data.contents[11]).find('Wzno">') + 6:str(data.contents[11]).find('</p>')].strip()
-        except:
-            resultDic["webIndex"] = ""
-        return resultDic
+            pass
+        if not hasPrint:
+            self.lock.acquire()
+            try:
+                self.taskNum += 1
+                newPrint("INFO", f"【{self.taskNum}/{self.taskCount}】  【{((self.taskNum / self.taskCount) * 100):.2f}%】", flush=True, start="\r", end="")
+            finally:
+                self.lock.release()
 
     # 加载ip地址、去重
-    def loadTarget(self):
+    def loadTargetIP(self):
         targetList = []
-        with open(self.args.file) as f:
-            for line in f.readlines():
-                line = line.strip()
-                if "https://" in line:
-                    line = line.replace("https://", "")
-                if "http://"  in line:
-                    line = line.replace("http://", "")
-                try:
-                    # 允许IP文件中放入带端口的数据，如127.0.0.1:8080，截取IP
-                    targetList.append(line.split(":")[0])
-                except:
-                    targetList.append(line)
+        if self.args.ip:
+            targetList = ipParse([self.args.ip])
+        elif self.args.file:
+            with open(self.args.file) as f:
+                for line in f.readlines():
+                    line = line.strip()
+                    if "https://" in line:
+                        line = line.replace("https://", "")
+                    if "http://"  in line:
+                        line = line.replace("http://", "")
+                    try:
+                        # 允许IP文件中放入带端口的数据，如127.0.0.1:8080，截取IP
+                        targetList.append(line.split(":")[0])
+                    except:
+                        targetList.append(line)
+            targetList = ipParse(targetList)
         return list(set(targetList))
 
     # 多线程运行
@@ -190,30 +136,23 @@ class GetWebSiteTitle:
         self.start = time.time()
         self.titleList = []
         self.lock = Lock()
-        # executor = ThreadPoolExecutor(max_workers=self.args.thread)
-        # executor.map(self.getTitle, self.ipList)
+        self.taskNum = 0
         executor = ThreadPoolExecutor(max_workers=self.args.thread)
-        all = [executor.submit(self.getTitle, (url)) for url in self.ipList]
+        all = [executor.submit(self.getTitle, (ip_port)) for ip_port in self.targetList]
         wait(all)
-        self.outputResult()
-
-    # 输出结果
-    def outputResult(self):
-        fileName = list(os.path.splitext(os.path.basename(self.args.file)))[0]
-        self.outputFile = f"./output/{fileName}_{self.args.output}.csv"
-        if not os.path.isdir(r"./output"):
-            os.mkdir(r"./output")
-        with open(self.outputFile, "a", encoding="gbk", newline="") as f:
-            csvWrite = csv.writer(f)
-            if self.args.icp:
-                csvWrite.writerow(["URL", "Title", "ICP备案号", "单位名称", "单位类型", "域名", "网站名称", "网站首页"])
-            else:
-                csvWrite.writerow(["URL", "Title"])
-            for result in self.titleList:
-                csvWrite.writerow(result)
         self.end = time.time()
-        print("\nTime Spent: %.2f" % (self.end - self.start))
+        print("\n\nTime Spent: %.2f" % (self.end - self.start))
         print(f"{'-' * 20}\nThe result has been saved in \033[36m{self.outputFile}\033[0m\n")
 
+    # 输出至文件
+    def outputToFile(self, resultList):
+        with open(self.outputFile, "a", encoding="gbk", newline="") as f:
+            csvWrite = csv.writer(f)
+            if not self.hasWriteTitle:
+                csvWrite.writerow(["URL", "Code", "Title"])
+                self.hasWriteTitle = True
+            for result in resultList:
+                csvWrite.writerow(result)
+
 if __name__ == "__main__":
-    GetWebSiteTitle()
+    webEye()
