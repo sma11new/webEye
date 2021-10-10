@@ -14,32 +14,15 @@
 4.  使用**线程池**增加请求速度
 5.  查询结果输出至**Excel表格**
 
-**webEye支持的ip、port参数格式：**
-
-1.  -i/--ip 参数支持的格式：
-                    192.168.1.1/24
-                    192.168.1.1-20
-                    192.168.1.*
-                    192.168.1-6.*
-2.  -p/--port 参数支持的格式：
-                    80,443,8080
-                    1-8080
-
-可使用","隔开一次指定多个，如：`-i 192.168.1.1-20,192.168.1-5.*,10.0.0.1/24`
-
 **开发环境**：Python 3.7、Win10
 
 ### Install & Usage
 
-Clone：
+Clone && Module：
 
 ```
 git clone https://github.com/Sma11New/webEye.git
-```
 
-Module：
-
-```
 pip install -r requirements.txt
 ```
 
@@ -57,6 +40,26 @@ optional arguments:
   -T TIMEOUT, --Timeout TIMEOUT  Request timeout (default 3) 请求超时，默认3
   -o OUTPUT, --output OUTPUT     Output file (default ./output/webEye_title_{date}.csv)
 ```
+
+**webEye支持的ip、port参数格式：**
+
+1.  -i/--ip 参数支持的格式：
+
+    ```
+    192.168.1.1/24
+    192.168.1.1-20
+    192.168.1.
+    192.168.1-6.*
+    ```
+
+2.  -p/--port 参数支持的格式：
+
+    ```
+    80,443,8080
+    1-8080
+    ```
+
+可使用","隔开一次指定多个，如：`-i 192.168.1.1-20,192.168.1-5.*,10.0.0.1/24`
 
 Example：
 
@@ -94,7 +97,7 @@ python .\webEye.py -f E:\Desktop\ip.txt -p 80,8080,443,9090
 
 -   webEye v2.1
 -   删除ICP备案查询功能
--   优化数据输入输出，加入解析多种ip和port格式，具体见下文
+-   优化数据输入输出，加入解析多种ip和port格式
 -   支持-p/--ip参数直接输入目标ip/ip段
 -   支持ip文件中输入多种格式ip信息
 -   加入任务进度，更加直观
