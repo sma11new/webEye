@@ -1,28 +1,31 @@
-# webEye
-
+# webEye - web资产探测
 
 **PS：全新版本的批量ip反查域名及备案信息工具已完成，更快更准确更高效：[ip2domain](https://github.com/Sma11New/ip2domain)**
 
-**此工具专项于ip对应web资产探测。**
+### 简述
 
+**webEye工具专项于ip对应web资产探测，可用于红队信息搜集、蓝队内网web资产探测梳理。**
 
-基于需求，对GetWebSiteTitle进行了二次修改，并更改项目名为**webEye**，用于快速批量检测IP上多个端口是否搭建网站，获取其Title以及ICP备案信息，取代逐个IP、网站手工归属查询，红队资产探测，可配合 [PocList](https://github.com/Sma11New/PocList) 中的批量POC使用，刷SRC利器！
-
-webEye目前功能及要点：
+**webEye目前功能及要点：**
 
 1.  批量IP的多个端口上Web**存活检测**
 2.  获取存活web**站点标题**
-3.  获取存活站点ICP备案号，调用接口查询**备案信息**，得到厂商信息及属性
+3.  获取指定多个响应码的web资产
 4.  使用**线程池**增加请求速度
 5.  查询结果输出至**Excel表格**
 
-webEye目前存在问题：
+**webEye支持的ip、port参数格式：**
 
-1.  网站备案号匹配不够精准，导致匹配的备案号存在冗余数据，出现查询备案信息失败
-2.  响应中中文乱码导致无法获取备案号
-3.  程序逻辑问题，所有查询到的数据临时放在内存，数据量很大时会导致内存占用率较高
+1.  -i/--ip 参数支持的格式：
+                    192.168.1.1/24
+                    192.168.1.1-20
+                    192.168.1.*
+                    192.168.1-6.*
+2.  -p/--port 参数支持的格式：
+                    80,443,8080
+                    1-8080
 
-后续加以改进。
+可使用","隔开一次指定多个，如：`-i 192.168.1.1-20,192.168.1-5.*,10.0.0.1/24`
 
 **开发环境**：Python 3.7、Win10
 
@@ -31,56 +34,78 @@ webEye目前存在问题：
 Clone：
 
 ```
-git clone
+git clone https://github.com/Sma11New/webEye.git
 ```
 
 Module：
 
 ```
-pip install -r 
+pip install -r requirements.txt
 ```
 
 Usage：
 
 ```
-python webEye.py [-h] [-f FILE] [-T THREAD] [-t TIMEOUT] [-p PORT] [-o OUTPUT] [--icp]
+webEye.py [-h] [-i IP] [-f FILE] [-p PORT] [-t THREAD] [-T TIMEOUT] [-o OUTPUT]
 
 optional arguments:
-  -h, --help      show this help message and exit
-  -f, --file      The IP file, default is ./ip.txt   指定要检测的IP地址文件，一行一个IP，默认./ip.txt
-  -T, --Thread    Number of thread, default is 32   线程数
-  -t, --timeout   request timeout(default 3)   请求超时
-  -p, --port      request port(default 80,81,88,443,8080,8081)  待检测端口，可输入常见的Web端口，有默认值
-  -o, --output    WebSite Title output file, default is ./output/{fileName}_title_{date}.csv  输出结果
-  --icp           Query ICP record information of the website, default False   开启ICP查询，影响速度
+  -h, --help                     show this help message and exit
+  -i IP, --ip IP                 Target ip, eg:127.0.0.1/24  目标ip
+  -f FILE, --file FILE           Target ip list file   ip列表文件
+  -p PORT, --port PORT           request port (default 80,81,88,443,4430,8080,8081,8181,8443,9000) 端口
+  -t THREAD, --thread THREAD     Number of thread (default 512) 线程，默认512
+  -T TIMEOUT, --Timeout TIMEOUT  Request timeout (default 3) 请求超时，默认3
+  -o OUTPUT, --output OUTPUT     Output file (default ./output/webEye_title_{date}.csv)
 ```
 
-所有参数均为可选参数，都有默认值，但必须有目标IP文件，默认是./ip,txt，一行一个目标IP，可直接将带协议、端口的地址写入，省去师傅们删掉协议、端口的操作，弟弟在程序里写好了。如（127.0.0.1 或 127.0.0.1:8080 或 http://127.0.0.1:8080）
+Example：
 
-![2021-08-08_18-35-16](README.assets/2021-08-08_18-35-16.png)
+```
+  python3 webEye.py -i 192.168.1.1/16
+  python3 webEye.py -i 192.168.1.1-20,192.168.1-5.* -p 80,8080,100-999
+  python3 webEye.py -f ipList.txt -p 1-65535
+```
+
+可在命令行中用-i/--ip指定目标ip，支持多种格式和多个参数，使用英文逗号隔开，-p/--port同理
+
+也可将目标ip信息写入文件，一行一个目标ip，支持多种格式，可直接将带协议、端口的地址写入，省去师傅们删掉协议、端口的操作，弟弟在程序里写好了。如（127.0.0.1 或 127.0.0.1:8080 或 http://127.0.0.1:8080）
+
+ipList.txt：
+
+```
+192.168.1.1/24
+192.168.2.1-200
+192.168.1-5.*
+```
 
 ### Example
 
-**1、**不加--icp，只进行存活探测和Title获取，速度较快
-
-```bash
-python webEye.py -f 1.txt
+```
+python .\webEye.py -f E:\Desktop\ip.txt -p 80,8080,443,9090
 ```
 
-![2021-08-08_18-34-39](README.assets/2021-08-08_18-34-39.png)
-
-大概一个IP用时2秒，具体根据timeout和要检测的IP数、端口数决定，结果均保存至output目录
-
-**2、**加--icp，不只进行存活探测和Title获取，还查询ICP备案信息，速度稍慢
-
-```bash
-python webEye.py -f 1.txt --icp
-```
-
-![2021-08-08_18-33-50](README.assets/2021-08-08_18-33-50.png)
-
-大概一个IP用时2.5秒。结果在终端中会显示所属单位类型，像事业单位、政府机构网站，提交漏洞情报收益较大，所有信息输出至Excel表格中：
-
-![image-20210808193413388](README.assets/image-20210808193413388.png)
+![image_2021-10-10_14-38-36](README.assets/image_2021-10-10_14-38-36.png)
 
 程序没什么结构性，不过能跑起来、能用的就是好程序，欢迎师傅们使用。
+
+### 更新：
+
+**2021-10-10：**
+
+-   webEye v2.1
+-   删除ICP备案查询功能
+-   优化数据输入输出，加入解析多种ip和port格式，具体见下文
+-   支持-p/--ip参数直接输入目标ip/ip段
+-   支持ip文件中输入多种格式ip信息
+-   加入任务进度，更加直观
+
+**2021-08-08：**
+
+-   webEye v2.1
+-   修改项目名为webEye
+-   加入ICP备案查询
+
+**2021-02-13：**
+
+-   GetWebTitle v1.0
+-   可读取文件ip列表进行简单的web资产探测
