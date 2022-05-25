@@ -93,7 +93,7 @@ class webEye:
                 self.lock.acquire()
                 try:
                     self.titleList.append(webDataList)
-                    newPrint(str(rep.status_code), f"{reqURL:<32}{title}\033[0m", start="\r")
+                    newPrint(str(rep.status_code), f"[{reqURL}][{title}]\033[0m", start="\r")
                     hasPrint = True
                     if len(self.titleList) % 20 == 0:
                         self.outputToFile(self.titleList)
